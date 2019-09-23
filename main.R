@@ -34,6 +34,8 @@ categories1 <-c("malware", "app", "website", "hosting", "exploits", "botnet", "e
 categories2 <-c("malware", "app", "website", "hosting", "exploits", "botnet", "e-mail", "phone", "RAT")
 # Only other
 categories3 <- c("other - account", "other - custom", "other - fake", "other - guide", "other - pirated software", "other - voucher/invite/codes/lottery/gift", "other")
+# Without "cash-out"
+categories4 <- c("malware", "app", "website", "hosting", "exploits", "botnet", "e-mail", "phone", "RAT", "other - account", "other - custom", "other - fake", "other - guide", "other - pirated software", "other - voucher/invite/codes/lottery/gift", "other")
 ### Graph for Average turnover / marketplace / day
 
 # colors
@@ -59,7 +61,7 @@ for (mp in marketplaces) {
     total_revenue = sum(orders$order_amount_usd, na.rm = TRUE)
     
     # Iterate over all categories
-    for (ct in categories) {
+    for (ct in categories4) {
       
       # Find all orders from a category
       tmp <- subset(orders, category == ct)
@@ -86,7 +88,7 @@ ggplot(out, aes(x = marketplace, y = as.numeric(amount), fill = category, linety
   xlab("Marketplace") + 
   ylab("Percentage") +
   scale_fill_manual(values=cols) +
-  ggtitle("Percentage of Turnover per Category per Marketplace")
+  ggtitle("Percentage of Turnover per Category per Marketplace (Excluding Cash-Out)")
 
 ######################################################
 ### Graph for total revenue per category per month ###
@@ -280,7 +282,7 @@ x <- c("number", "vendor", "marketplace", "amount")
 colnames(out2) <- x
 
 # Iterate mps
-for (mp in marketplaces2) {
+for (mp in marketplaces1) {
   
   # Find entries for mp
   tmp <- subset(out, marketplace == mp)
@@ -308,8 +310,8 @@ ggplot(data=out2, aes(number, amount, colour=marketplace)) +
   labs(x = "Number of vendors", y = "Fraction of items in marketplace") + 
   theme_minimal() + 
   theme(plot.title = element_text(hjust = 0.5)) + 
-  ggtitle("Proportion of Items in Marketplace as a Function of the Number of Vendors (Only Alphabay and Evolution)") + 
-  scale_x_continuous(breaks = seq(0, 3200, 500))
+  ggtitle("Proportion of Items in Marketplace as a Function of the Number of Vendors (Excluding Alphabay and Evolution)") + 
+  scale_x_continuous(breaks = seq(0, 3200, 100))
 
 #############################################
 ### Percentage of Items as fn of #vendors ###
