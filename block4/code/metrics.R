@@ -81,6 +81,69 @@ ggplot(data=out, aes(x=date, amount, group=marketplace)) +
   scale_x_date(date_breaks = "1 year", labels = date_format("%Y")) +
   labs(x = "Date (Month)", y = "Number of Orders") + 
   theme_minimal() + 
-  theme(plot.title = element_text(hjust = 0.5), color="Set1")
+  theme(plot.title = element_text(hjust = 0.5))
 
 
+#############################################
+### Graph #unique sellers per marketplace ###
+#############################################
+
+# Set data frame for ouput
+out <- data.frame(matrix(ncol = 3, nrow = 0))
+x <- c("date", "marketplace", "amount")
+colnames(out) <- x
+
+# iterate over mps
+for (mp in marketplaces) {
+  if (mp != "") {
+    print(mp)
+    
+    # Get all feedbacks for current mp, excluding other
+    orders <- subset(feedbacks, marketplace == mp & category != "other")
+    
+    # Rip out days
+    orders$date <- format(as.Date(orders$date), "%Y-%m")
+    
+    # Dates
+    dates <- orders$date
+    
+    # Unique dates
+    unique_dates <- unique(orders$date)
+    
+    # Turnover
+    turnover <- orders$order_amount_usd
+    
+    # DF with only categories, dates & amounts
+    df <- data.frame(date = dates, category=orders$category, seller=orders$receiver_hash)
+    
+    # Loop over all unique dates
+    for (dt in unique_dates) {
+      
+      # Get all feedbacks with current date
+      tmp <- subset(df, date == dt)
+      
+      # Unique dates
+      unique_sellers <- unique(tmp$seller)
+      
+      # Create entry with date equal to the approx. middle of the month,
+      # The marketplace and the amount of unique sellers
+      entry<-data.frame(paste(dt, "15", sep="-"), mp, length(unique_sellers))
+      colnames(entry)<-x
+      
+      # Store
+      out <- rbind(out, entry)
+    }
+  }
+}
+
+# Sort on date
+out$date <- as.Date(out$date)
+out <- out[order(out$date),]
+
+# Plot
+ggplot(data=out, aes(x=date, amount, group=marketplace)) + 
+  geom_line(aes(color = marketplace, linetype = marketplace)) + 
+  scale_x_date(date_breaks = "1 year", labels = date_format("%Y")) +
+  labs(x = "Date (Month)", y = "Number of Unique Sellers") + 
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5))
