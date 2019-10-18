@@ -3,7 +3,7 @@ library(ggthemes)
 library(extrafont)
 library(plyr)
 library(scales)
-
+library("ggpubr")
 
 ##################
 ### HOW TO USE ###
@@ -19,13 +19,13 @@ library(scales)
 items <- read.csv("items.csv")
 feedbacks <- read.csv("feedbacks.csv")
 
+# All
+marketplaces <- c("Alphabay", "Silk Road 1", "Evolution", "Black Market Reloaded", "Agora", "Pandora", "Hydra", "Silk Road 2")
 
 # Dates
 min_date = min(as.Date(items$first_observed), na.rm = TRUE)
 max_date = max(as.Date(items$last_observed), na.rm = TRUE)
 
-#print (min_date)
-#print (max_date)
 
 # Set data frame for ouput
 out <- data.frame(matrix(ncol = 5, nrow = 0))
@@ -38,57 +38,68 @@ library(lubridate)
 
 # Unique dates
 unique_dates <- unique(feedbacks$date)
-
+count = 0
 for (dt in unique_dates) {
+  count = count + 1
   tmp <- subset(feedbacks, date == dt & category != "other")
-
+  
   u_sellers <- length(unique(tmp$receiver_hash))
-  if (u_sellers == 0) {
-    print ("brijke", dt)
-    break
-  }
+  
   unique_hash <- unique(tmp$receiver_hash)
   u_mp <- length(unique(tmp$marketplace))
   sales <- sum(tmp$order_amount_usd)
   
-  for (vhash in unique_hash) {
-    tmp2 <- subset(items, vendor_hash == vhash)
-    u_countries <- length(unique(tmp2$ships_from))
-  }
-  
+   for (vhash in unique_hash) {
+     tmp2 <- subset(items, vendor_hash == vhash)
+     u_countries <- length(unique(tmp2$ships_from))
+   }
+   
   entry<-data.frame(dt, u_sellers, u_mp, sales, u_countries, nrow(tmp))
   colnames(entry)<-x
   
   out <- rbind(out, entry)
+  # if (count > 100) {
+  #   break
+  # }
 }
 
-library("ggpubr")
-ggscatter(out, x = "sellers", y = "marketplaces", 
-          conf.int = TRUE, 
+out$date <- as.Date(out$date)su
+out <- out[order(out$date),]
+
+head(out)
+
+out$d <- as.Date(out$date)
+out$Month <- months(out$d)
+out$Year <- format(out$d, format="%y")
+
+out$Month <- as.Date.character(cut(out$date, breaks = "month")) 
+
+avg_sellers <- aggregate(sellers ~ Month + Year, out, mean)
+avg_markets <- aggregate(marketplaces ~ Month + Year, out, mean)
+avg_sales <- aggregate(sales ~ Month + Year, out, mean)
+avg_countries <- aggregate(countries ~ Month + Year, out, mean)
+
+out2 <- data.frame(matrix(ncol = 5, nrow = 0))
+entry2 <- data.frame(avg_sellers$Month, avg_sellers$sellers,avg_markets$marketplaces,avg_sales$sales,avg_countries$countries)
+x2 <- c("month", "avg_sellers", "avg_marketplaces", "avg_sales", "avg_countries")
+colnames(out2) <- x2
+out2 <- rbind(out2, entry2)
+
+ggscatter(out2, x = "avg_sellers.sellers", y = "avg_markets.marketplaces",
+             add = "reg.line", conf.int = TRUE,
+             cor.coef = TRUE, cor.method = "kendall",
+             xlab = "average sellers per month", ylab = "average active marketplaces per month")
+
+ggscatter(out2, x = "avg_sellers.sellers", y = "avg_sales.sales",
+          add = "reg.line", conf.int = TRUE,
           cor.coef = TRUE, cor.method = "kendall",
-          xlab = "number of sellers", ylab = "marketplaces")
+          xlab = "average sellers per month", ylab = "average sales per month")
 
-library("ggpubr")
- ggscatter(out, x = "sellers", y = "sales", 
-           add = "reg.line", conf.int = TRUE, 
-           cor.coef = TRUE, cor.method = "kendall",
-           xlab = "number of sellers", ylab = "sales")
- 
-library("ggpubr")
- ggscatter(out, x = "sellers", y = "countries", 
-           add = "reg.line", conf.int = TRUE, 
-           cor.coef = TRUE, cor.method = "kendall",
-           xlab = "number of sellers", ylab = "countries")
+ggscatter(out2, x = "avg_sellers.sellers", y = "avg_countries.countries",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "kendall",
+          xlab = "average sellers per month", ylab = "average shipping from countries per month")
 
-res <- cor.test(out$sellers, out$marketplaces, 
-                method = "kendall")
-res
-
-res <- cor.test(out$sellers, out$sales, 
-                method = "kendall")
-res
-
-res <- cor.test(out$sellers, out$countries, 
-                method = "kendall")
-res
+#Multiple Regression Analysis
+model <- lm(avg_sellers$sellers ~ avg_markets$marketplaces + avg_sales$sales + avg_countries$countries, out2)
 
