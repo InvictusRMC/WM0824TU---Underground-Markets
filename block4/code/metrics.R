@@ -175,7 +175,7 @@ for (dt in dates) {
   orders <- subset(items, marketplace != "" &
                      category != "other" & 
                      as.Date(first_observed) >= dt &
-                     as.Date(last_observed) <= dates[index+1])
+                     as.Date(last_observed) < dates[index+1])
   } else {
     orders <- subset(items, marketplace != "" &
                        category != "other" & 
@@ -205,7 +205,6 @@ ggplot(data=out, aes(x=date, amount, group=marketplace)) +
   labs(x = "Date (Month)", y = "Number of Listings") + 
   theme_minimal() + 
   theme(plot.title = element_text(hjust = 0.5))
-
 
 ################################
 ### Graph #sellers per month ###
@@ -254,3 +253,58 @@ ggplot(data=out, aes(x=date, amount)) +
   labs(x = "Date (Month)", y = "Number of Unique Active Sellers") + 
   theme_minimal() + 
   theme(plot.title = element_text(hjust = 0.5))
+
+
+###########################################
+### Graph #top 20% of sellers per month ###
+###########################################
+
+# Set data frame for ouput
+out <- data.frame(matrix(ncol = 2, nrow = 0))
+x <- c("date", "amount")
+colnames(out) <- x
+
+# iterate over mps
+for (dt in dates) {
+  print(as.Date(dt, origin="1970-01-01"))
+  
+  index = match(dt, dates)
+  if (index != length(dates)) {
+    # Get all feedbacks for current mp, excluding other
+    orders <- subset(items, marketplace != "" &
+                       category != "other" & 
+                       as.Date(first_observed) >= dt &
+                       as.Date(last_observed) < dates[index+1] &
+                       total_sales > 0)
+    orders <- orders[order(-orders$total_sales),]
+    orders <- orders[1:as.integer(0.20 * nrow(orders)),]
+  } else {
+    orders <- subset(items, marketplace != "" &
+                       category != "other" & 
+                       as.Date(first_observed) >= dt &
+                       total_sales > 0)
+    orders <- orders[order(-orders$total_sales),]
+    orders <- orders[1:as.integer(0.20 * nrow(orders)),]
+  }
+  
+  
+  unique_sellers <- unique(orders$vendor_hash)
+  entry<-data.frame(dt, length(unique_sellers))
+  colnames(entry)<-x
+  
+  # Store
+  out <- rbind(out, entry)
+}
+
+# Sort on date
+out$date <- as.Date(out$date, origin="1970-01-01")
+out <- out[order(out$date),]
+
+# Plot
+ggplot(data=out, aes(x=date, amount)) + 
+  geom_line() + 
+  scale_x_date(date_breaks = "6 months", labels = date_format("%Y-%m")) +
+  labs(x = "Date (Month)", y = "Number of Vendors") + 
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_smooth(method = "lm")
