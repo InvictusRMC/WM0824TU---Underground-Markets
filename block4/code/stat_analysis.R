@@ -58,9 +58,6 @@ for (dt in unique_dates) {
   colnames(entry)<-x
   
   out <- rbind(out, entry)
-  # if (count > 100) {
-  #   break
-  # }
 }
 
 out$date <- as.Date(out$date)su
@@ -85,21 +82,35 @@ x2 <- c("month", "avg_sellers", "avg_marketplaces", "avg_sales", "avg_countries"
 colnames(out2) <- x2
 out2 <- rbind(out2, entry2)
 
-ggscatter(out2, x = "avg_sellers.sellers", y = "avg_markets.marketplaces",
-             add = "reg.line", conf.int = TRUE,
-             cor.coef = TRUE, cor.method = "kendall",
-             xlab = "average sellers per month", ylab = "average active marketplaces per month")
+#Multiple Regression Analysis
+model <- lm(avg_sellers$sellers ~ avg_markets$marketplaces + avg_sales$sales + avg_countries$countries, out2)
 
-ggscatter(out2, x = "avg_sellers.sellers", y = "avg_sales.sales",
+breaks = c(-Inf, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180)
+group <- findInterval(out2$avg_sellers.sellers, breaks)
+out2$seller_range <- group
+out2$avg_sellers.sellers <- group
+y = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180)
+
+range = c(-Inf, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180)
+tempp1 <- data.frame(out)
+#aggregate(~range(), out, mean)
+
+temp1 <- ddply(out2, ~avg_sellers.sellers, summarise, mean=mean(avg_markets.marketplaces), sd=sd(avg_markets.marketplaces))
+ggscatter(temp1, x = "avg_sellers.sellers", y = "mean",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "kendall",
+          xlab = "average sellers per month", ylab = "average active marketplaces per month")
+
+temp2 <- ddply(out2, ~avg_sellers.sellers, summarise, mean=mean(avg_sales.sales), sd=sd(avg_sales.sales))
+ggscatter(temp2, x = "avg_sellers.sellers", y = "mean",
           add = "reg.line", conf.int = TRUE,
           cor.coef = TRUE, cor.method = "kendall",
           xlab = "average sellers per month", ylab = "average sales per month")
 
-ggscatter(out2, x = "avg_sellers.sellers", y = "avg_countries.countries",
+temp3 <- ddply(out2, ~avg_sellers.sellers, summarise, mean=mean(avg_countries.countries), sd=sd(avg_countries.countries))
+ggscatter(temp3, x = "avg_sellers.sellers", y = "mean",
           add = "reg.line", conf.int = TRUE,
           cor.coef = TRUE, cor.method = "kendall",
           xlab = "average sellers per month", ylab = "average shipping from countries per month")
 
-#Multiple Regression Analysis
-model <- lm(avg_sellers$sellers ~ avg_markets$marketplaces + avg_sales$sales + avg_countries$countries, out2)
 
